@@ -1,8 +1,12 @@
 ---
 title: "canroadtrip"
 output: html_document
+runtime: shiny
 date: "2025-09-18"
 ---
+
+# Force Shiny to open in your default browser
+options(shiny.launch.browser = TRUE)
 
 # I. loading libraries
 ```{r}
@@ -79,21 +83,17 @@ story_maplibre(
 ```
 
 # IV. Server: map rendering + scroll behavior
-```{r}
-# Render map with red route, blue stop dots, and yellow highlight for active stop
+```{r, context="server"}
+# IV. Server: map rendering + scroll behavior
 output$map <- renderMaplibre({
   m <- maplibre()
-
-  # Route: connect all stops in order
   if (nrow(stops_sf) >= 2) {
     route_line <- sf::st_sfc(sf::st_linestring(sf::st_coordinates(stops_sf)), crs = 4326)
     route_sf <- sf::st_sf(geometry = route_line)
     m <- m |>
       add_source("route", route_sf) |>
-      add_line_layer("route_line", "route", line_color = "#D22", line_width = 4) # red
+      add_line_layer("route_line", "route", line_color = "#D22", line_width = 4)
   }
-
-  # Stops: all blue dots + highlight layer for current stop
   m |>
     add_source("stops", stops_sf) |>
     add_circle_layer("stops_all", "stops",
@@ -101,13 +101,12 @@ output$map <- renderMaplibre({
       circle_stroke_color = "#FFFFFF", circle_stroke_width = 2
     ) |>
     add_circle_layer("stop_highlight", "stops",
-      circle_radius = 10, circle_color = "#FFCC00", # yellow
+      circle_radius = 10, circle_color = "#FFCC00",
       circle_stroke_color = "#333333", circle_stroke_width = 2
     ) |>
     fit_bounds(stops_sf, padding = 50)
 })
 
-# Scroll handlers: fly to current stop + highlight it
 invisible(lapply(seq_len(nrow(stops_df)), function(i) {
   on_section("map", stops_df$stop_id[i], {
     xy <- as.numeric(sf::st_coordinates(stops_sf[i, ])[1, 1:2])
@@ -116,3 +115,4 @@ invisible(lapply(seq_len(nrow(stops_df)), function(i) {
       fly_to(center = xy, zoom = 9, pitch = 45, bearing = -15, duration = 2500)
   })
 }))
+```

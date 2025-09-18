@@ -1,7 +1,7 @@
 ﻿stop_id,stop_order,title,subtitle,lon,lat,blurb_text,image_url
 montreal,1,Montreal,,-73.5673,45.5019,Visiting The McGraths,
-ottawa,2,Ottawa,,-75.6972,45.4215,,
-carp,3,Diefenbunker,,-76.0413,45.3491,,
+ottawa,2,Ottawa,,-75.6972,45.4215,Parliament House tour,
+carp,3,Diefenbunker,,-76.0413,45.3491,Checking out Canada's Cold War Museum ,
 supeirorpark,4,Lake Superior Provintial Park,,-84.8115,47.7234,,
 wawagoose,5,Giant Goose,,-84.7830,47.9772,,
 voyageurs,6,Voyageurs NP,,-93.1660,48.4839,,

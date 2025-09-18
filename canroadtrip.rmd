@@ -4,7 +4,26 @@ output: html_document
 date: "2025-09-18"
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+# I. loading libraries
+```{r}
+# --- Core R Markdown + Shiny ---
+library(shiny)      # interactive runtime inside Rmd
+library(flexdashboard) # optional: nicer layout for story-like scrolling
+
+# --- Data handling ---
+library(readr)      # robust CSV reading
+library(dplyr)      # data manipulation
+library(sf)         # spatial features (points + route)
+
+# --- Mapping with mapgl ---
+library(mapgl)      # maplibre + story maps support
+
+# --- Plotting / formatting (optional) ---
+library(ggplot2)    # if you want any charts or diagnostics
+library(htmltools)  # to embed HTML (images, links) in panels
+
+# --- Other helpers ---
+library(glue)       # string interpolation for captions/titles
+library(purrr)      # functional programming helpers if looping
 ```
 

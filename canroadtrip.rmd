@@ -6,7 +6,9 @@ date: "2025-09-18"
 ---
 
 # Force Shiny to open in your default browser
+```{r}
 options(shiny.launch.browser = TRUE)
+```
 
 # I. loading libraries
 ```{r}

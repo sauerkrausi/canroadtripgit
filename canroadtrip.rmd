@@ -27,3 +27,92 @@ library(glue)       # string interpolation for captions/titles
 library(purrr)      # functional programming helpers if looping
 ```
 
+
+
+# II. Load in stop data as backbone for it 
+```{r}
+# --- Read stops.csv from data folder ---
+stops_df <- readr::read_csv("/Users/felix/GoogleDrive/Canada/canroadtripgit/data/stops.csv", show_col_types = FALSE)
+
+# --- Basic checks ---
+# stop_id must be unique, stop_order must be numeric, lat/lon must be valid
+if (anyDuplicated(stops_df$stop_id)) stop("Duplicate stop_id values found.")
+if (!is.numeric(stops_df$stop_order)) stop("stop_order must be numeric.")
+if (any(is.na(stops_df$lon)) || any(is.na(stops_df$lat))) stop("Missing lon/lat values.")
+
+# --- Arrange by stop_order ---
+stops_df <- dplyr::arrange(stops_df, stop_order)
+
+# --- Convert to sf object for mapping ---
+stops_sf <- sf::st_as_sf(stops_df, coords = c("lon","lat"), crs = 4326)
+
+# --- Quick preview ---
+print(stops_df)
+```
+
+# III. Build story UI
+```{r}
+# Uses stops_df with columns: stop_id, stop_order, title, subtitle, lon, lat, blurb_text, image_url
+story_maplibre(
+  map_id = "map",
+  sections = setNames(
+    lapply(seq_len(nrow(stops_df)), function(i) {
+      story_section(
+        # Title + optional subtitle
+        title = paste0(
+          stops_df$stop_order[i], ". ", stops_df$title[i],
+          if (!is.na(stops_df$subtitle[i]) && nchar(stops_df$subtitle[i]) > 0)
+            paste0(" — ", stops_df$subtitle[i]) else ""
+        ),
+        content = list(
+          # Add blurb text paragraph if present
+          if (!is.na(stops_df$blurb_text[i])) tags$p(stops_df$blurb_text[i]),
+          # Add image if present
+          if (!is.na(stops_df$image_url[i]) && nchar(stops_df$image_url[i]) > 0)
+            tags$img(src = stops_df$image_url[i], style = "width:100%;border-radius:8px;")
+        )
+      )
+    }),
+    stops_df$stop_id
+  )
+)
+```
+
+# IV. Server: map rendering + scroll behavior
+```{r}
+# Render map with red route, blue stop dots, and yellow highlight for active stop
+output$map <- renderMaplibre({
+  m <- maplibre()
+
+  # Route: connect all stops in order
+  if (nrow(stops_sf) >= 2) {
+    route_line <- sf::st_sfc(sf::st_linestring(sf::st_coordinates(stops_sf)), crs = 4326)
+    route_sf <- sf::st_sf(geometry = route_line)
+    m <- m |>
+      add_source("route", route_sf) |>
+      add_line_layer("route_line", "route", line_color = "#D22", line_width = 4) # red
+  }
+
+  # Stops: all blue dots + highlight layer for current stop
+  m |>
+    add_source("stops", stops_sf) |>
+    add_circle_layer("stops_all", "stops",
+      circle_radius = 6, circle_color = "#0066CC",
+      circle_stroke_color = "#FFFFFF", circle_stroke_width = 2
+    ) |>
+    add_circle_layer("stop_highlight", "stops",
+      circle_radius = 10, circle_color = "#FFCC00", # yellow
+      circle_stroke_color = "#333333", circle_stroke_width = 2
+    ) |>
+    fit_bounds(stops_sf, padding = 50)
+})
+
+# Scroll handlers: fly to current stop + highlight it
+invisible(lapply(seq_len(nrow(stops_df)), function(i) {
+  on_section("map", stops_df$stop_id[i], {
+    xy <- as.numeric(sf::st_coordinates(stops_sf[i, ])[1, 1:2])
+    maplibre_proxy("map") |>
+      set_filter("stop_highlight", list("==", "stop_id", stops_df$stop_id[i])) |>
+      fly_to(center = xy, zoom = 9, pitch = 45, bearing = -15, duration = 2500)
+  })
+}))

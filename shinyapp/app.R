@@ -5,10 +5,7 @@ library(readr)
 library(dplyr)
 
 # --- data: stops + route ---
-stops_df <- readr::read_csv(
-  "/Users/felix/GoogleDrive/Canada/canroadtripgit/data/stops.csv",
-  show_col_types = FALSE
-) |>
+stops_df <- readr::read_csv("data/stops.csv", show_col_types = FALSE) |>
   dplyr::arrange(stop_order) |>
   dplyr::mutate(
     stop_id = as.character(stop_id) # ensure id is character
@@ -26,32 +23,43 @@ stops_df <- readr::read_csv(
     )
   )
 
-# serve-from-www: strip leading "www/" if present; expect paths like "photos/foo.jpeg"
+# ensure types (optional but safer)
+stops_df <- readr::read_csv("data/stops.csv", show_col_types = FALSE) |>
+  dplyr::mutate(
+    stop_order = as.numeric(stop_order),
+    lon = as.numeric(lon),
+    lat = as.numeric(lat)
+  ) |>
+  dplyr::arrange(stop_order) |>
+  dplyr::mutate(
+    stop_id = as.character(stop_id),
+    dplyr::across(
+      dplyr::any_of(c(
+        "subtitle",
+        "blurb_text",
+        "image_file",
+        "image_url",
+        "album_url"
+      )),
+      ~ as.character(.x)
+    )
+  )
+
+# strip accidental "www/" prefix; expect "photos/foo.jpeg"
 stops_df$image_file <- ifelse(
   is.na(stops_df$image_file),
   "",
   sub("^www/", "", stops_df$image_file)
 )
 
-# optional: warn about missing local files
+# correct missing-file warning (look under ./www)
 missing_local <- nzchar(stops_df$image_file) &
-  !file.exists(file.path("shinyapp/www", stops_df$image_file))
+  !file.exists(file.path("www", stops_df$image_file))
 if (any(missing_local)) {
   warning(
     "Missing local images: ",
     paste(stops_df$image_file[missing_local], collapse = ", ")
   )
-}
-
-stops_df$section_id <- paste0(stops_df$stop_id, "_", stops_df$stop_order)
-stops_sf <- sf::st_as_sf(stops_df, coords = c("lon", "lat"), crs = 4326)
-
-# prefer precomputed OSRM route; else empty
-route_path <- "/Users/felix/GoogleDrive/Canada/canroadtripgit/data/route_line.geojson"
-route_sf <- if (file.exists(route_path)) {
-  sf::st_read(route_path, quiet = TRUE)
-} else {
-  sf::st_sf(geometry = sf::st_sfc(), crs = 4326)
 }
 
 # precompute coords for speed

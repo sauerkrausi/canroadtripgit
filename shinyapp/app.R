@@ -9,12 +9,44 @@ stops_df <- readr::read_csv(
   "/Users/felix/GoogleDrive/Canada/canroadtripgit/data/stops.csv",
   show_col_types = FALSE
 ) |>
-  dplyr::arrange(stop_order)
+  dplyr::arrange(stop_order) |>
+  dplyr::mutate(
+    stop_id = as.character(stop_id) # ensure id is character
+  ) |>
+  dplyr::mutate(
+    dplyr::across(
+      dplyr::any_of(c(
+        "subtitle",
+        "blurb_text",
+        "image_file",
+        "image_url",
+        "album_url"
+      )),
+      ~ as.character(.x)
+    )
+  )
+
+# serve-from-www: strip leading "www/" if present; expect paths like "photos/foo.jpeg"
+stops_df$image_file <- ifelse(
+  is.na(stops_df$image_file),
+  "",
+  sub("^www/", "", stops_df$image_file)
+)
+
+# optional: warn about missing local files
+missing_local <- nzchar(stops_df$image_file) &
+  !file.exists(file.path("shinyapp/www", stops_df$image_file))
+if (any(missing_local)) {
+  warning(
+    "Missing local images: ",
+    paste(stops_df$image_file[missing_local], collapse = ", ")
+  )
+}
 
 stops_df$section_id <- paste0(stops_df$stop_id, "_", stops_df$stop_order)
 stops_sf <- sf::st_as_sf(stops_df, coords = c("lon", "lat"), crs = 4326)
 
-# prefer precomputed OSRM route if available; else fallback to straight segments
+# prefer precomputed OSRM route; else empty
 route_path <- "/Users/felix/GoogleDrive/Canada/canroadtripgit/data/route_line.geojson"
 route_sf <- if (file.exists(route_path)) {
   sf::st_read(route_path, quiet = TRUE)

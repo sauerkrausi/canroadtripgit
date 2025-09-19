@@ -2445,7 +2445,10 @@
       "checksum": "15eb64648a7e1a995293d8e1cfb340b8"
     },
     "build_route.R": {
-      "checksum": "c8881a3b8bb73677aeba72b408a661c5"
+      "checksum": "e503cdd8568601d09f9dc7dfc22cbda1"
+    },
+    "data/route_line.geojson": {
+      "checksum": "d36b58035ee86da2df6b4d0df099b0bc"
     },
     "data/stops.csv": {
       "checksum": "6ef2a8586303b779c85b7580746ec624"

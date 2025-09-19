@@ -38,16 +38,45 @@ ui <- fluidPage(
             if (!is.na(stops_df$subtitle[i]) && nchar(stops_df$subtitle[i]) > 0)
               paste0(" — ", stops_df$subtitle[i]) else ""
           ),
-          content = list(
+          content = htmltools::tagList(
             if (!is.na(stops_df$blurb_text[i])) tags$p(stops_df$blurb_text[i]),
+
+            # prefer local file under www/  -> use "photos/..." here
             if (
-              !is.na(stops_df$image_url[i]) && nchar(stops_df$image_url[i]) > 0
+              "image_file" %in%
+                names(stops_df) &&
+                !is.na(stops_df$image_file[i]) &&
+                nchar(stops_df$image_file[i]) > 0
+            )
+              tags$img(
+                src = stops_df$image_file[i],
+                loading = "lazy",
+                style = "width:100%;border-radius:8px;"
+              ),
+
+            # fallback to direct URL
+            if (
+              ("image_url" %in% names(stops_df)) &&
+                !is.na(stops_df$image_url[i]) &&
+                nchar(stops_df$image_url[i]) > 0
             )
               tags$img(
                 src = stops_df$image_url[i],
                 loading = "lazy",
                 style = "width:100%;border-radius:8px;"
-              )
+              ),
+
+            # optional album link
+            if (
+              ("album_url" %in% names(stops_df)) &&
+                !is.na(stops_df$album_url[i]) &&
+                nchar(stops_df$album_url[i]) > 0
+            )
+              tags$p(tags$a(
+                href = stops_df$album_url[i],
+                target = "_blank",
+                "Open album"
+              ))
           )
         )
       }),
@@ -55,7 +84,6 @@ ui <- fluidPage(
     )
   )
 )
-
 server <- function(input, output, session) {
   output$map <- renderMaplibre({
     m <- maplibre(

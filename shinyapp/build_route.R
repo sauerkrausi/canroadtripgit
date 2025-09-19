@@ -7,8 +7,8 @@ library(osrm)
 options(osrm.server = "https://router.project-osrm.org/", osrm.profile = "car")
 
 # --- paths (absolute to avoid WD confusion) ---
-stops_csv <- "/Users/felix/GoogleDrive/Canada/canroadtripgit/data/stops.csv"
-out_geojson <- "/Users/felix/GoogleDrive/Canada/canroadtripgit/data/route_line.geojson"
+stops_csv <- "data/stops.csv"
+out_geojson <- "data/route_line.geojson"
 
 # --- load stops ---
 stops <- read_csv(stops_csv, show_col_types = FALSE) |> arrange(stop_order)

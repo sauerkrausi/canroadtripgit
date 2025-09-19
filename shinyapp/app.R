@@ -4,18 +4,23 @@ library(sf)
 library(readr)
 library(dplyr)
 
-# --- data ---
-stops_df <- read_csv(
+# --- data: stops + route ---
+stops_df <- readr::read_csv(
   "/Users/felix/GoogleDrive/Canada/canroadtripgit/data/stops.csv",
   show_col_types = FALSE
 ) |>
-  arrange(stop_order)
-stops_df$section_id <- paste0(stops_df$stop_id, "_", stops_df$stop_order)
-stops_sf <- st_as_sf(stops_df, coords = c("lon", "lat"), crs = 4326)
+  dplyr::arrange(stop_order)
 
-route_sf <- if (nrow(stops_sf) >= 2) {
-  st_sf(geometry = st_sfc(st_linestring(st_coordinates(stops_sf)), crs = 4326))
-} else st_sf(geometry = st_sfc(), crs = 4326)
+stops_df$section_id <- paste0(stops_df$stop_id, "_", stops_df$stop_order)
+stops_sf <- sf::st_as_sf(stops_df, coords = c("lon", "lat"), crs = 4326)
+
+# prefer precomputed OSRM route if available; else fallback to straight segments
+route_path <- "/Users/felix/GoogleDrive/Canada/canroadtripgit/data/route_line.geojson"
+route_sf <- if (file.exists(route_path)) {
+  sf::st_read(route_path, quiet = TRUE)
+} else {
+  sf::st_sf(geometry = sf::st_sfc(), crs = 4326)
+}
 
 # precompute coords for speed
 coords_mat <- sf::st_coordinates(stops_sf)[, 1:2]
@@ -58,24 +63,26 @@ server <- function(input, output, session) {
       style = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
     )
 
-    if (nrow(route_sf) > 0) {
+    # red route if present
+    if (exists("route_sf") && nrow(route_sf) > 0) {
       m <- add_source(m, "route", route_sf)
       m <- add_line_layer(
         m,
         "route_line",
         "route",
-        line_color = "#D22",
+        line_color = "#E53935",
         line_width = 4
-      )
+      ) # richer red
     }
 
+    # stops: larger dots + halo + labels
     m <- add_source(m, "stops", stops_sf)
     m <- add_circle_layer(
       m,
       "stops_all",
       "stops",
-      circle_radius = 5,
-      circle_color = "#0066CC",
+      circle_radius = 7, # bigger
+      circle_color = "#1E88E5", # vivid blue
       circle_stroke_color = "#FFFFFF",
       circle_stroke_width = 2
     )
@@ -83,11 +90,22 @@ server <- function(input, output, session) {
       m,
       "stop_highlight",
       "stops",
-      circle_radius = 10,
-      circle_color = "#FFCC00",
-      circle_stroke_color = "#333333",
+      circle_radius = 11,
+      circle_color = "#FFEB3B", # yellow
+      circle_stroke_color = "#263238",
       circle_stroke_width = 2
     )
+
+    # simple text labels from the 'title' column
+    m <- add_symbol_layer(
+      m,
+      "stop_labels",
+      "stops",
+      text_field = "{title}", # uses stops_sf$title
+      text_size = 12,
+      text_offset = c(0, 1.2)
+    ) # just above the dot
+
     m <- set_filter(m, "stop_highlight", list("==", "section_id", "__none__"))
     m <- fit_bounds(m, stops_sf, padding = 40)
     m
